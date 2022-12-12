@@ -1,0 +1,62 @@
+body
+{
+    background-color:chocolate;
+/*          background-image: url('https://img.freepik.com/free-photo/top-view-circular-food-frame_23-2148723455.jpg?w=996&t=st=1670765143~exp=1670765743~hmac=db6dcfd4eb921213c44df53e965680f34fb82c31733cfbc362f446d12a4b60aa'); */
+background-image: url('/views/view/food_cir.png');
+    background-repeat: repeat-y;
+    background-position-x: center;
+
+}
+.navbar
+{
+    background-color: black;
+}
+.navbar li
+{
+    float: left;
+    list-style: none;
+    margin: 13px 20px;              
+}
+
+.navbar ul
+{
+    overflow: auto;
+}
+
+/* .navbar li button
+{
+    text-decoration: none;
+    color: white;
+    padding: 13px;
+} */
+
+.navbar input
+{
+    border: 2px solid black;                
+}
+
+.search
+{
+    float: right;
+    color: white;
+    padding: 13px;
+}
+
+#input_food
+{
+position: absolute;
+left: 30%;
+top: 50%;
+height: 30px;
+width: 400px;
+}
+#food_button {
+position: absolute;
+left: 43%;
+top: 65%;
+}
+#input_food::placeholder
+{
+text-align: center;
+font-size: 20px;
+}
