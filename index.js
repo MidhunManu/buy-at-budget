@@ -1,3 +1,4 @@
+const e = require('express');
 const express = require('express');
 const app = express();
 const path = require('path');
@@ -72,27 +73,32 @@ app.post("/shopitem" , (req , res) => {
       const browser = await puppeteer.launch({headless : true});
       const page = await browser.newPage();
       await page.goto(url);
-      // const hrefs = await page.$$eval('a.a-size-base.a-link-normal.s-underline-text.s-underline-link-text.s-link-style.a-text-normal', as => as.map(a => a.href));
+      // const hrefs = await page.$$eval('a.a-size-base .a-link-normal .s-underline-text .s-underline-link-text .s-link-style .a-text-normal', as => as.map(a => a.href));
       // console.log(hrefs)
+      
+// await page.evaluate('document.querySelector("span.styleNumber").getAttribute("data-Color")')
       const hrefs = await page.evaluate(() => {
-        return Array.from(document.getElementsByTagName('a-size-base.a-link-normal.s-underline-text.s-underline-link-text.s-link-style.a-text-normal'), a => a.href);
-      });
+        const href_tag = document.querySelectorAll("a.a-link-normal.s-underline-text.s-underline-link-text.s-link-style.a-text-normal");
+        var href_array = [];
+
+        href_tag.forEach((i) => {
+          href_array.push("https://www.amazon.in/"+i.getAttribute("href"));
+        })
+        return href_array;
+      })
+      // const hrefs = await page.evaluate('document.querySelector("a.a-size-base.a-link-normal.s-underline-text.s-underline-link-text.s-link-style.a-text-normal").getAttribute("href")');
+      // console.log(hrefs);
+
       
       // finding all prices 
       const grab = await page.evaluate(() => {
         const priceTag = document.querySelectorAll("span.a-price-whole");
-        const productLinks = document.querySelectorAll("a-size-base a-link-normal s-underline-text s-underline-link-text s-link-style a-text-normal");
         var data = [];
-        var links = [];
 
         priceTag.forEach((elements) => {
           data.push(elements.innerText);
         })
 
-        // productLinks.forEach((l) => {
-        //   links.push(l.innerHTML);
-        // })
-        // console.log(links);
         return (data);
         
       });
@@ -116,19 +122,29 @@ app.post("/shopitem" , (req , res) => {
         data.reverse();
       }
 
-      try {
+      // try {
         console.log(`${product_name} pricelist:\n`)
         console.log(data);
         console.log("\nminimum first \n")
         for(var i = 0; i < 5; i++) {
           console.log(data[i]);
         }
-        console.log(hrefs);
-      }
-      catch {
-        console.log(data[length - 1]);
-      }
+      // }
+      // catch {
+      //   console.log(data[data.length - 1]);
+      // }
 
+      try {
+        console.log(hrefs);
+        console.log(`${product_name} pricelist:\n`)
+        console.log(data);
+        console.log("\nminimum first \n")
+        for(var i = 0; i < 5; i++) {
+          console.log(data[i]);
+        }
+      } catch (error) {
+        console.log("err");
+      }
 
 
 //      const min = Math.min(...data);
