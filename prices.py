@@ -53,3 +53,4 @@ df.to_csv('{0}.csv'.format(search_query), index=False)
 # print(df['product url'][min_index])
 # url = df['product url'][0]
 # webbrowser.open_new_tab(url)
+# // this is the best code
