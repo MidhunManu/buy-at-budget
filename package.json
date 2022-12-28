@@ -10,10 +10,11 @@
   "author": "Midhun",
   "license": "ISC",
   "dependencies": {
+    "airportsjs": "^0.3.1",
     "bootstrap": "^5.2.3",
     "ejs": "^3.1.8",
     "express": "^4.18.2",
     "nodemon": "^2.0.20",
-    "puppeteer": "^19.3.0"
+    "puppeteer": "^19.4.0"
   }
 }
