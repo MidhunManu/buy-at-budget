@@ -8,8 +8,14 @@ app.set('view engine' , 'ejs');
 app.set('views' , path.join(__dirname , 'views'));
 app.use(express.static('public'));
 
-var data_to_send = []; // this array is very important
+var data_to_send = []; // this array is result data of shopping
+var flight_data_to_send = []; // this is array is data of flights
 var product_name_to_buy;
+var store_start_location_name;
+var store_start_location_iata;
+var store_end_location_name;
+var store_end_location_iata;
+var spicejet_url;
 
 app.get('/' , (req , res) => {
   // res.render("view/home.ejs");
@@ -203,10 +209,7 @@ app.post("/getCheapestFare", (req , res) => {
   var start_location = (req.body.start_location);
   var end_location = (req.body.end_location);
   var time = (req.body.departure_date);
-  var store_start_location_name;
-  var store_start_location_iata;
-  var store_end_location_name;
-  var store_end_location_iata;
+
   var year;
   var month;
   var day;
@@ -215,6 +218,7 @@ app.post("/getCheapestFare", (req , res) => {
     const browser = await puppeteer.launch({headless:true});
     const page = await browser.newPage();
     await page.goto("https://en.wikipedia.org/wiki/List_of_airports_in_India");
+
     const getCodes = await page.evaluate(() => {
         const tag = document.querySelectorAll('div.od');
         var data = [];
@@ -259,28 +263,67 @@ app.post("/getCheapestFare", (req , res) => {
     month = time[1];
     day = time[2];
     var departure_day = `${year}-${month}-${day}`;
-    const url = `https://www.spicejet.com/search?from=${store_start_location_iata}&to=${store_end_location_iata}&tripType=1&departure=${departure_day}&adult=1&child=0&srCitizen=0&infant=0&currency=INR&redirectTo=/`;
+    var makemytrip_departure_day = `${day}/${month}/${year}`;
+    // const url = `https://google.com`;
+    const url = `https://www.makemytrip.com/flight/search?tripType=O&itinerary=${store_start_location_iata}-${store_end_location_iata}-${makemytrip_departure_day}&paxType=A-1_C-0_I-0&cabinClass=E&sTime=1672337344084&forwardFlowRequired=true&mpo=&semType=&intl=false`
+    spicejet_url = url;
     console.log(url);
 
+    // blackText fontSize18 blackFont white-space-no-wrap
+    const spicejet_price_page = await browser.newPage();
+    var unix_time = (Math.floor(new Date(`${year}.${month}.${day}`).getTime() / 1000));
+    // await spicejet_price_page.goto("https://www.makemytrip.com/flight/search?tripType=O&itinerary=PNQ-BLR-08/01/2023&paxType=A-1_C-0_I-0&cabinClass=E&sTime=1672337344084&forwardFlowRequired=true&mpo=&semType=&intl=false");
+    await spicejet_price_page.goto(`https://www.google.com/search?q=cheapest+flight+from+${store_start_location_iata}+to+${store_end_location_iata}+on+${departure_day}&oq=cheapest+flight+from+PNQ+to+BLR&aqs=chrome..69i57.11745j0j4&sourceid=chrome&ie=UTF-8`);
 
-    const getFlightTicketsSpiceJet = await page.evaluate(() => {
-      const priceTag = document.querySelectorAll('div.css-76zvg2.r-jwli3a.r-poiln3.r-ubezar.r-majxgm.r-6dt33c');
-      var prices = [];
-      priceTag.forEach((i) => {
-        console.log(prices.push(i.innerText));
+    const flight = await spicejet_price_page.evaluate(() => {
+      const tag = document.querySelectorAll('span.GARawf');
+      var data = [];
+      tag.forEach((i) => {
+          data.push(i.innerText);
       })
-      return prices;
-    });
+      return data;
+  })
 
-    console.log(getFlightTicketsSpiceJet);
+    const flight_link = await spicejet_price_page.evaluate(() => {
+      const tag = document.querySelectorAll("div.YXEKBb.LQQ1Bd > div > div > a");
+      var data = [];
+      tag.forEach((i) => {
+        data.push(i.getAttribute("href"));
+      })
+      return data;
+    })
   
+    const flight_name = await spicejet_price_page.evaluate(() => {
+      const tag = document.querySelectorAll("span.ps0VMc");
+      var data = [];
+      tag.forEach((i) => {
+        data.push(i.innerText);
+      })
+    })
+
+    console.log(flight);
+    console.log(flight_link)
+    
+    flight_data_to_send = [];
+    for(var i = 0; i < flight.length; i++) {
+      flight_data_to_send.push({"price":flight[i] , "link":flight_link[i]});
+    }
+
 
     await browser.close();
+    res.render("view/flights_result.ejs");
+    res.end();
   })();
+  
+  
+  
+  // scraping for spicejet data
+  // console.log();
+})
 
 
-  res.render("view/trips.ejs");
-  res.end();
+app.get('/getFlightData' , (req , res) => {
+  res.send(flight_data_to_send);
 })
 
 app.get("/login" , (req , res) => {
