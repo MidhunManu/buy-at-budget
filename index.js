@@ -110,6 +110,9 @@ app.post("/shopitem" , (req , res) => {
         
       });
 
+
+
+
       var data = grab;
       console.log(data);
       for(var i = 0; i < data.length; i++) {
@@ -169,7 +172,7 @@ app.post("/shopitem" , (req , res) => {
           console.log(data[i]);
         }
 
-        data_to_send = []
+        data_to_send = [] // clearing the array after one api call
         for(var i = 0; i < 5; i++) {
           data_to_send.push({"price":data[final[i]] , "url":hrefs[final[i]] , "ratings":getRatings[i] , "names":getNames[i] , "name_of_product":product_name_to_buy});
         }
@@ -188,6 +191,7 @@ app.post("/shopitem" , (req , res) => {
 
 //      const min = Math.min(...data);
 //  	  console.log(min);
+
 
       await browser.close();
       res.render("view/shopping_result.ejs");
@@ -304,7 +308,7 @@ app.post("/getCheapestFare", (req , res) => {
     console.log(flight);
     console.log(flight_link)
     
-    flight_data_to_send = [];
+    flight_data_to_send = []; // clearing the array after one api call
     for(var i = 0; i < flight.length; i++) {
       flight_data_to_send.push({"price":flight[i] , "link":flight_link[i]});
     }
