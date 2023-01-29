@@ -174,7 +174,7 @@ app.post("/shopitem" , (req , res) => {
 
         data_to_send = [] // clearing the array after one api call
         for(var i = 0; i < 5; i++) {
-          data_to_send.push({"price":data[final[i]] , "url":hrefs[final[i]] , "ratings":getRatings[i] , "names":getNames[i] , "name_of_product":product_name_to_buy});
+          data_to_send.push({"price":data[final[i]] , "url":hrefs[final[i]] , "ratings":getRatings[i] , "names":getNames[final[i]] , "name_of_product":product_name_to_buy});
         }
         // .........................................................................
         // data = data.sort((a , b) => {return a - b});
@@ -277,7 +277,7 @@ app.post("/getCheapestFare", (req , res) => {
     const spicejet_price_page = await browser.newPage();
     var unix_time = (Math.floor(new Date(`${year}.${month}.${day}`).getTime() / 1000));
     // await spicejet_price_page.goto("https://www.makemytrip.com/flight/search?tripType=O&itinerary=PNQ-BLR-08/01/2023&paxType=A-1_C-0_I-0&cabinClass=E&sTime=1672337344084&forwardFlowRequired=true&mpo=&semType=&intl=false");
-    await spicejet_price_page.goto(`https://www.google.com/search?q=cheapest+flight+from+${store_start_location_iata}+to+${store_end_location_iata}+on+${departure_day}&oq=cheapest+flight+from+PNQ+to+BLR&aqs=chrome..69i57.11745j0j4&sourceid=chrome&ie=UTF-8`);
+    await spicejet_price_page.goto(`https://www.google.com/search?q=cheapest+flight+from+${store_start_location_iata}+to+${store_end_location_iata}+on+${departure_day}&oq=cheapest+flight+from+${store_start_location_iata}+to+${store_end_location_iata}&aqs=chrome..69i57.11745j0j4&sourceid=chrome&ie=UTF-8`);
 
     const flight = await spicejet_price_page.evaluate(() => {
       const tag = document.querySelectorAll('span.GARawf');
@@ -303,6 +303,7 @@ app.post("/getCheapestFare", (req , res) => {
       tag.forEach((i) => {
         data.push(i.innerText);
       })
+	  return data;
     })
 
     console.log(flight);
@@ -310,7 +311,7 @@ app.post("/getCheapestFare", (req , res) => {
     
     flight_data_to_send = []; // clearing the array after one api call
     for(var i = 0; i < flight.length; i++) {
-      flight_data_to_send.push({"price":flight[i] , "link":flight_link[i]});
+      flight_data_to_send.push({"price":flight[i] ,"airline":flight_name[i], "link":flight_link[i]});
     }
 
 
@@ -349,6 +350,122 @@ app.get("/signup" , (req , res) => {
 app.get("/getdata" , (req , res) => {
   res.send(data_to_send);
 })
+
+
+app.post("/flipkart", (req, res) => {
+  res.render("view/flipkart.ejs")
+})
+
+app.post("/flipshop", (req, res) => {
+
+  // let flipkart_product_url= `https://www.flipkart.com/search?q=${req.body.product_name_html}`
+  let flipkart_product_url = `https://www.flipkart.com/search?q=${req.body.product_name_html}&otracker=search&otracker1=search&marketplace=FLIPKART&as-show=off&as=off&sort=price_asc`;
+  flipkart_product_url = flipkart_product_url.replaceAll(" ", "+");
+  let flipkart_price = [];
+  let flipkart_links = [];
+	let flipkart_data = [];
+
+  (async () => {
+    const browser = await puppeteer.launch({headless : true});
+    const page = await browser.newPage();
+    await page.goto(flipkart_product_url);
+
+    const vertical_prices = await page.evaluate(() => {
+      const price_tag = document.querySelectorAll("div._30jeq3._1_WHN1");
+      let single_price_tag = []
+      price_tag.forEach((i) => {
+        single_price_tag.push(i.innerText);
+      })
+      return single_price_tag;
+    })
+
+    const cluttered_prices = await page.evaluate(() => {
+      const price_tag = document.querySelectorAll("div._30jeq3");
+      let cluttered_price_tag = [];
+      price_tag.forEach((i) => {
+        cluttered_price_tag.push(i.innerText);
+      })
+      return cluttered_price_tag;
+    })
+
+    const vertical_prices_all = await page.evaluate(() => {
+      const tag = document.querySelectorAll("a._1fQZEK");
+      let data = [];
+      tag.forEach((i) => {
+        data.push(`https://www.flipkart.com${i.getAttribute("href")}`);
+      })
+      return data;
+    })
+
+    const cluttered_prices_all = await page.evaluate(() => {
+      const tag = document.querySelectorAll("a._2rpwqI");
+      let data = [];
+      tag.forEach((i) => {
+        data.push(`https://www.flipkart.com${i.getAttribute("href")}`);
+      })
+      return data;
+    })
+
+    const cluttered_prices_all_rem = await page.evaluate(() => {
+      const tag = document.querySelectorAll("a._3bPFwb");
+      let data = [];
+      tag.forEach((i) => {
+        data.push(`https://www.flipkart.com${i.getAttribute("href")}`);
+      })
+      return data;
+    })
+
+		const product_name = await page.evaluate(() => {
+			const name_tag = document.querySelectorAll("div._2WkVRV");
+			let names = [];
+			name_tag.forEach((i) => {
+				names.push(i.innerText);
+			})
+			return names;
+		})
+
+
+    if(cluttered_prices.length != 0) {
+      flipkart_price = flipkart_price.concat(cluttered_prices);
+    }
+    else {
+      if(vertical_prices.length != 0) {
+        flipkart_price = flipkart_price.concat(vertical_prices);
+      }
+    }
+
+    if(cluttered_prices_all.length != 0) {
+      flipkart_links = flipkart_links.concat(cluttered_prices_all);
+    }
+
+    else if(vertical_prices_all.length != 0) {
+      flipkart_links = flipkart_links.concat(vertical_prices_all);
+    }
+
+    else if(cluttered_prices_all.length == 0 && vertical_prices_all.length == 0) {
+      flipkart_links = flipkart_links.concat(cluttered_prices_all_rem);
+    }
+    // console.log(vertical_prices_all);
+    // console.log(vertical_prices);
+    // console.log(cluttered_prices);
+    
+    // console.log(cluttered_prices_all)
+   // console.log(flipkart_price);
+    //console.log(flipkart_links);
+    // console.log(cluttered_prices_all);
+    // console.log(vertical_prices_all)
+    // console.log(flipkart_price);
+    // console.log({"price_len":vertical_prices.length, "link_len":vertical_prices_all.length});
+		for(let i = 0; i < 5; i++) {
+			flipkart_data.push({"price":flipkart_price[i], "url":flipkart_links[i], "ratings":"unavailable", "names":product_name[i], "name_of_product":`${req.body.product_name_html}`});
+		}
+		console.log(flipkart_data);	
+
+  })()
+
+})
+
+
 app.listen(8080);
 
 // this is the best code
