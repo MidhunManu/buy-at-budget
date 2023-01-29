@@ -277,6 +277,7 @@ app.post("/getCheapestFare", (req , res) => {
     const spicejet_price_page = await browser.newPage();
     var unix_time = (Math.floor(new Date(`${year}.${month}.${day}`).getTime() / 1000));
     // await spicejet_price_page.goto("https://www.makemytrip.com/flight/search?tripType=O&itinerary=PNQ-BLR-08/01/2023&paxType=A-1_C-0_I-0&cabinClass=E&sTime=1672337344084&forwardFlowRequired=true&mpo=&semType=&intl=false");
+
     await spicejet_price_page.goto(`https://www.google.com/search?q=cheapest+flight+from+${store_start_location_iata}+to+${store_end_location_iata}+on+${departure_day}&oq=cheapest+flight+from+${store_start_location_iata}+to+${store_end_location_iata}&aqs=chrome..69i57.11745j0j4&sourceid=chrome&ie=UTF-8`);
 
     const flight = await spicejet_price_page.evaluate(() => {
@@ -303,12 +304,15 @@ app.post("/getCheapestFare", (req , res) => {
       tag.forEach((i) => {
         data.push(i.innerText);
       })
+
 	  return data;
+
     })
 
     console.log(flight);
     console.log(flight_link)
     
+
     flight_data_to_send = []; // clearing the array after one api call
     for(var i = 0; i < flight.length; i++) {
       flight_data_to_send.push({"price":flight[i] ,"airline":flight_name[i], "link":flight_link[i]});
