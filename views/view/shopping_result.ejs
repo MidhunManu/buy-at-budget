@@ -18,6 +18,7 @@
           <th>food name</th> -->
           <th>name</th>
           <th>price</th>
+		  <th>company</th>
           <th>link</th>
           <th>ratings</th>
     </tr>
@@ -40,6 +41,7 @@
           var row = `<tr>
             <td>${data[i].names || data[i].name_of_product}</td>
             <td>${data[i].price}</td>
+			<td>${data[i].company}</td>
             <td><button><a href="${data[i].url} target="_blank">buy it</a></button></td>
             <td>${data[i].ratings}</td>
           </tr>
