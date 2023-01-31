@@ -8,7 +8,8 @@ app.set('view engine' , 'ejs');
 app.set('views' , path.join(__dirname , 'views'));
 app.use(express.static('public'));
 
-var data_to_send = []; // this array is result data of shopping
+var data_to_send = []; // this array is result data of shopping, only for amazon
+var shopping_final_data_to_send; // shopping json reusult
 var flight_data_to_send = []; // this is array is data of flights
 var product_name_to_buy;
 var store_start_location_name;
@@ -21,11 +22,11 @@ app.get('/' , (req , res) => {
   // res.render("view/home.ejs");
   res.render("view/shopping.ejs");
 })
-app.post('/food' , (req , res) => {
+app.post('/course' , (req , res) => {
   res.render("view/food.ejs");
   var foodDetails = [];
 });
-app.post('/getCheapestFood' , (req , res) => {
+app.post('/getCheapestCourse' , (req , res) => {
   var foodname = req.body.food_name
   var url = `https://www.swiggy.com/search?query=${foodname}`;
   console.log(foodname);
@@ -37,7 +38,7 @@ app.post('/getCheapestFood' , (req , res) => {
     // await page.screenshot({path : "ss.png"});
   })
 
-  res.render("view/food.ejs");
+  res.render("view/course.ejs");
   res.end();
 })
 
@@ -132,8 +133,120 @@ app.post("/shopitem" , (req , res) => {
          data.reverse();
        }
        */
-      
-       var pseudo_data = [];
+     
+		// scraping flipkart
+			
+  const flipkart_page = await browser.newPage();
+    var flipkart_product_name = req.body.product_name_html;
+    flipkart_product_name = flipkart_product_name.replaceAll(" ", "+");
+    // let flipkart_product_url = `https://www.flipkart.com/search?q=${flipkart_product_name}&otracker=search&otracker1=search&marketplace=FLIPKART&as-show=off&as=off&sort=price_asc`;
+    let flipkart_product_url = `https://www.flipkart.com/search?q=${req.body.product_name_html}&otracker=search&otracker1=search&marketplace=FLIPKART&as-show=off&as=off&sort=price_asc`
+await flipkart_page.goto(flipkart_product_url);
+  let flipkart_price = [];
+  let flipkart_links = [];
+  let flipkart_data = [];
+
+  const vertical_prices = await flipkart_page.evaluate(() => {
+		const price_tag = document.querySelectorAll("div._30jeq3._1_WHN1");
+			let single_price_tag = [];
+			price_tag.forEach((i) => {
+				single_price_tag.push(i.innerText);
+			})
+			return price_tag;
+		})
+
+	const cluttered_prices = await flipkart_page.evaluate(() => {
+		const price_tag = document.querySelectorAll("div._30jeq3");
+      let cluttered_price_tag = [];
+      price_tag.forEach((i) => {
+        cluttered_price_tag.push(i.innerText);
+      })
+      return cluttered_price_tag;
+    })
+
+		const vertical_prices_all = await flipkart_page.evaluate(() => {
+			const tag = document.querySelectorAll("a._1fQZEK");
+      let data = [];
+      tag.forEach((i) => {
+        data.push(`https://www.flipkart.com${i.getAttribute("href")}`);
+			})
+			return data;
+		})
+
+		const cluttered_prices_all = await flipkart_page.evaluate(() =>{
+			const tag = document.querySelectorAll("a._3bPFwb");
+      let data = [];
+      tag.forEach((i) => {
+        data.push(`https://www.flipkart.com${i.getAttribute("href")}`);
+      })
+      return data;
+    })
+
+		const cluttered_prices_all_rem = await flipkart_page.evaluate(() => {
+		//	const tag = document.querySelectorAll("a._3bPFwb");
+		const tag = document.querySelectorAll("a.s1Q9rs");
+      let data = [];
+      tag.forEach((i) => {
+        data.push(`https://www.flipkart.com${i.getAttribute("href")}`);
+      })
+      return data;
+    })
+
+		const product_name = await flipkart_page.evaluate(() => {
+			const name_tag = document.querySelectorAll("div._4rR01T");
+			let names = [];
+			name_tag.forEach((i) => {
+				names.push(i.innerText);
+			})
+			return names;
+		})
+
+	
+		if(cluttered_prices.length != 0) {
+      flipkart_price = flipkart_price.concat(cluttered_prices);
+    }
+    else {
+      if(vertical_prices.length != 0) {
+        flipkart_price = flipkart_price.concat(vertical_prices);
+      }
+    }
+
+    if(cluttered_prices_all.length != 0) {
+      flipkart_links = flipkart_links.concat(cluttered_prices_all);
+    }
+
+    else if(vertical_prices_all.length != 0) {
+      flipkart_links = flipkart_links.concat(vertical_prices_all);
+    }
+
+    else if(cluttered_prices_all.length == 0 && vertical_prices_all.length == 0) {
+      flipkart_links = flipkart_links.concat(cluttered_prices_all_rem);
+    }
+	else {
+		flipkart_links = flipkart_links.contact(last_cluttered_links);
+	}
+
+    // for(var i = 0; i < product_name.length; i++) {
+    //   if(product_name[i] === null) {
+    //     product_name[i] = `${req.body.product_name_html}`;
+    //   }
+    // }
+   
+	for(let i = 0; i < flipkart_price.length; i++) {
+		flipkart_price[i] = flipkart_price[i].replaceAll(",", "");
+		flipkart_price[i] = flipkart_price[i].replaceAll("\u20B9", "");
+	}
+
+	flipkart_price = flipkart_price.map(Number); 
+    for(let i = 0; i < 5; i++) {
+			flipkart_data.push({"price":flipkart_price[i], "url":flipkart_links[i], "ratings":"unavailable", "names":product_name[i], "name_of_product":`${req.body.product_name_html}`, "company":"flipkart"});
+		}
+	
+    
+
+       var pseudo_data = [];for(let i = 0; i < 5; i++) {
+        flipkart_data.push({"price":flipkart_price[i], "url":flipkart_links[i], "ratings":"unavailable", "names":product_name[i], "name_of_product":`${req.body.product_name_html}`});
+      }
        var final = [];
 
        for(var i = 0; i < data.length; i++) {
@@ -172,20 +285,39 @@ app.post("/shopitem" , (req , res) => {
           console.log(data[i]);
         }
 
+		function swap(arr, xp, yp) {
+			var temp = arr[xp];
+			arr[xp] = arr[yp];
+			arr[yp] = temp;
+		}
+
+// flipkart_data.push({"price":flipkart_price[i], "url":flipkart_links[i], "ratings":"unavailable", "names":product_name[i], "name_of_product":`${req.body.product_name_html}`});
         data_to_send = [] // clearing the array after one api call
+		shopping_final_data_to_send = [] // clearing the array after one api call
+    
         for(var i = 0; i < 5; i++) {
-          data_to_send.push({"price":data[final[i]] , "url":hrefs[final[i]] , "ratings":getRatings[i] , "names":getNames[final[i]] , "name_of_product":product_name_to_buy});
+          shopping_final_data_to_send.push({"price":data[i] , "url":hrefs[i] , "ratings":getRatings[i] , "names":getNames[final[i]] , "name_of_product":product_name_to_buy, "company":"amazon"});
         }
-        // .........................................................................
-        // data = data.sort((a , b) => {return a - b});
-        // var min = Math.min(...data);
-        // console.log("cheapest : "+min);
-        // console.log(data.indexOf(min));
-        // console.log(hrefs[data.indexOf(min)]);
-        // console.log(`https://amazon.in/${hrefs[pos]}`)
-        // --------------------------------------------------
+
+        for(var j = 0; j < 5; j++) {
+          shopping_final_data_to_send.push({"price":flipkart_data[j].price, "url":flipkart_data[j].url, "rartings":flipkart_data[j].ratings, "names":flipkart_data[j].names, "names_of_product":flipkart_data[j].name_of_product, "company":"flipkart"});
+        }
+		
+		for(var k = 0; k < shopping_final_data_to_send.length; k++) {
+			console.log(typeof(shopping_final_data_to_send[k].price));
+		}
+		for(let i = 0; i < shopping_final_data_to_send.length - 1; i++) {
+			for(let j = 0; j < shopping_final_data_to_send.length - i - 1; j++) {
+			if(shopping_final_data_to_send[j].price > shopping_final_data_to_send[j + 1].price) {
+				swap(shopping_final_data_to_send, j, j + 1);
+			}
+		  }
+		}
+
+
+// *for flipkart make a new global array and insert data along with "data_to_send" and send the new global array to frontend.*
       } catch (error) {
-        console.log("err");
+		console.log(error.stack);
       }
 
 
@@ -319,11 +451,6 @@ app.post("/getCheapestFare", (req , res) => {
     res.render("view/flights_result.ejs");
     res.end();
   })();
-  
-  
-  
-  // scraping for spicejet data
-  // console.log();
 })
 
 
@@ -348,121 +475,7 @@ app.get("/signup" , (req , res) => {
 })
 
 app.get("/getdata" , (req , res) => {
-  res.send(data_to_send);
-})
-
-
-app.post("/flipkart", (req, res) => {
-  res.render("view/flipkart.ejs")
-})
-
-app.post("/flipshop", (req, res) => {
-
-  // let flipkart_product_url= `https://www.flipkart.com/search?q=${req.body.product_name_html}`
-  let flipkart_product_url = `https://www.flipkart.com/search?q=${req.body.product_name_html}&otracker=search&otracker1=search&marketplace=FLIPKART&as-show=off&as=off&sort=price_asc`;
-  flipkart_product_url = flipkart_product_url.replaceAll(" ", "+");
-  let flipkart_price = [];
-  let flipkart_links = [];
-	let flipkart_data = [];
-
-  (async () => {
-    const browser = await puppeteer.launch({headless : true});
-    const page = await browser.newPage();
-    await page.goto(flipkart_product_url);
-
-    const vertical_prices = await page.evaluate(() => {
-      const price_tag = document.querySelectorAll("div._30jeq3._1_WHN1");
-      let single_price_tag = []
-      price_tag.forEach((i) => {
-        single_price_tag.push(i.innerText);
-      })
-      return single_price_tag;
-    })
-
-    const cluttered_prices = await page.evaluate(() => {
-      const price_tag = document.querySelectorAll("div._30jeq3");
-      let cluttered_price_tag = [];
-      price_tag.forEach((i) => {
-        cluttered_price_tag.push(i.innerText);
-      })
-      return cluttered_price_tag;
-    })
-
-    const vertical_prices_all = await page.evaluate(() => {
-      const tag = document.querySelectorAll("a._1fQZEK");
-      let data = [];
-      tag.forEach((i) => {
-        data.push(`https://www.flipkart.com${i.getAttribute("href")}`);
-      })
-      return data;
-    })
-
-    const cluttered_prices_all = await page.evaluate(() => {
-      const tag = document.querySelectorAll("a._2rpwqI");
-      let data = [];
-      tag.forEach((i) => {
-        data.push(`https://www.flipkart.com${i.getAttribute("href")}`);
-      })
-      return data;
-    })
-
-    const cluttered_prices_all_rem = await page.evaluate(() => {
-      const tag = document.querySelectorAll("a._3bPFwb");
-      let data = [];
-      tag.forEach((i) => {
-        data.push(`https://www.flipkart.com${i.getAttribute("href")}`);
-      })
-      return data;
-    })
-
-		const product_name = await page.evaluate(() => {
-			const name_tag = document.querySelectorAll("div._2WkVRV");
-			let names = [];
-			name_tag.forEach((i) => {
-				names.push(i.innerText);
-			})
-			return names;
-		})
-
-
-    if(cluttered_prices.length != 0) {
-      flipkart_price = flipkart_price.concat(cluttered_prices);
-    }
-    else {
-      if(vertical_prices.length != 0) {
-        flipkart_price = flipkart_price.concat(vertical_prices);
-      }
-    }
-
-    if(cluttered_prices_all.length != 0) {
-      flipkart_links = flipkart_links.concat(cluttered_prices_all);
-    }
-
-    else if(vertical_prices_all.length != 0) {
-      flipkart_links = flipkart_links.concat(vertical_prices_all);
-    }
-
-    else if(cluttered_prices_all.length == 0 && vertical_prices_all.length == 0) {
-      flipkart_links = flipkart_links.concat(cluttered_prices_all_rem);
-    }
-    // console.log(vertical_prices_all);
-    // console.log(vertical_prices);
-    // console.log(cluttered_prices);
-    
-    // console.log(cluttered_prices_all)
-   // console.log(flipkart_price);
-    //console.log(flipkart_links);
-    // console.log(cluttered_prices_all);
-    // console.log(vertical_prices_all)
-    // console.log(flipkart_price);
-    // console.log({"price_len":vertical_prices.length, "link_len":vertical_prices_all.length});
-		for(let i = 0; i < 5; i++) {
-			flipkart_data.push({"price":flipkart_price[i], "url":flipkart_links[i], "ratings":"unavailable", "names":product_name[i], "name_of_product":`${req.body.product_name_html}`});
-		}
-		console.log(flipkart_data);	
-
-  })()
-
+  res.send(shopping_final_data_to_send);
 })
 
 
