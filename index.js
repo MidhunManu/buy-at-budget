@@ -79,8 +79,6 @@ app.post('/findCheapestGroceries' , (req , res) => {
 		for(var i = 0; i < get_product_link.length; i++) {
 			groceries_data_to_send.push(jio_mart_data[i]);
 		}
- 		console.log("jio mart price")
-		console.log(get_product_price); 
 
 		//console.log(jio_mart_data);
 
@@ -376,6 +374,49 @@ await flipkart_page.goto(flipkart_product_url);
     var flipkart_product_name = req.body.product_name_html;*/
 
 		// shopping jio mart scraping
+		const jioshop_page = await browser.newPage();
+    var jioshop_product_name = req.body.product_name_html;
+		var jioshop_url = `https://www.jiomart.com/catalogsearch/result?q=${jioshop_product_name}`;
+		jioshop_url = jioshop_url.replaceAll(" ", "%20");
+		var jioshop_data = [];	
+		await jioshop_page.goto(jioshop_url);
+
+		const jioshop_price = await jioshop_page.evaluate(() => {
+			const price_tag = document.querySelectorAll("span#final_price");
+			var data = [];
+			price_tag.forEach((i) => {
+				var price_text = i.innerText;
+				price_text = price_text.replaceAll(" ", "");	
+				price_text = price_text.replaceAll("\u20B9", "");
+				data.push(Number(price_text));
+			})
+			return data;
+		})
+
+		const jioshop_name = await jioshop_page.evaluate(() => {
+			const name_tag = document.querySelectorAll("span.clsgetname");
+			var data = [];
+			name_tag.forEach((i) => {
+				data.push(i.innerText);
+			})
+			return data;
+		})
+
+		const jioshop_link = await jioshop_page.evaluate(() => {
+			const link_tag = document.querySelectorAll("a.category_name.prod-name");
+			var data = [];
+			link_tag.forEach((i) => {
+				data.push("https://www.jiomart.com"+i.getAttribute("href"));
+			})
+			return data;
+		})
+
+		console.log("jio shop data");
+		for(var i = 0; i < 5; i++) {
+			jioshop_data.push({"name":jioshop_name[i], "price":jioshop_price[i], "url":jioshop_link[i], "name_of_product":`${jioshop_product_name}`, "company":"jiomart", "ratings":"unavailable"});
+		}
+		console.log(jioshop_data);
+	
 		
 	
 	
@@ -445,6 +486,10 @@ await flipkart_page.goto(flipkart_product_url);
         for(var j = 0; j < 5; j++) {
           shopping_final_data_to_send.push({"price":flipkart_data[j].price, "url":flipkart_data[j].url, "ratings":flipkart_data[j].ratings, "names":flipkart_data[j].names, "names_of_product":flipkart_data[j].name_of_product, "company":"flipkart"});
         }
+
+				for(var k = 0; k < 3; k++) {
+					shopping_final_data_to_send.push({"price":jioshop_data[k].price, "url":jioshop_data[k].url, "ratings":jioshop_data[k].ratings, "names":jioshop_data[k].name, "name_of_product":jioshop_data[k].name_of_product, "company":jioshop_data[k].company});
+				}
 		
 		for(var k = 0; k < shopping_final_data_to_send.length; k++) {
 			console.log(typeof(shopping_final_data_to_send[k].price));
