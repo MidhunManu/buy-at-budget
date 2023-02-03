@@ -15,8 +15,10 @@
     body
   {
           background-color: cornsilk;
-          background-image: url('https://img.freepik.com/free-vector/realistic-travel-background-with-elements_52683-77784.jpg?w=996&t=st=1670816315~exp=1670816915~hmac=3df6015a27d9a1d9ab5f91354e28da5fa5d82700b68489f89924cd9d69866505');
-          background-size: 1300px;
+		  /*background-image: url('https://img.freepik.com/premium-photo/stack-books-with-laptop-wooden_488220-20359.jpg?w=996');*/
+		  background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRH67SXTXO-7nF_6a-CrO3lekI6CB0rjYG3vg&usqp=CAU');
+          background-repeat: repeat-y;
+          background-size: 1300px 600px;
           background-position-x: center;
   
   }
@@ -36,7 +38,7 @@
             <li class="nav-item">
               <form action="/groceries" method="post">
                 <button class="btn text-white">
-					Groceries <img src="https://as2.ftcdn.net/v2/jpg/04/58/91/93/1000_F_458919360_NUF4GxrLoeOMJvjSb2NsGNgoGovGzsMX.jpg" width="20" height="20">
+                  Groceries <img src="https://as2.ftcdn.net/v2/jpg/04/58/91/93/1000_F_458919360_NUF4GxrLoeOMJvjSb2NsGNgoGovGzsMX.jpg" width="20" height="20">
                 </button>
               </form>
             </li>
@@ -67,29 +69,16 @@
     </nav>
 
     <div class="container my-5">
-      <form action="/getCheapestFare" method="post" id="input_food_form">
-        <div id="input_your_location">
-          <input type="text"  class="form-control my-4" id="start_location" name = "start_location" placeholder="enter your location" autocomplete="off">
+      <form action="/findCheapestGroceries" method="post" id="input_food_form">
+        <div id="input_food_div">
+          <input type="text"  class="form-control my-4" id="input_groceries" name = "find_groceries" placeholder="what are you looking for ?" autocomplete="off">
         </div>
-        <br>
-        <div id="input_destination">
-          <input type="text" class="form-control" id="end_location" name="end_location" placeholder="enter your destination" autocomplete="off">
+        <br><br>
+        <div id="course_search_button" class="d-flex justify-content-center my-4">
+          <button type="submit" id="groceries_button" class="btn btn-success">Find Groceries</button>
         </div>
-
-        <br>
-        <div>
-          <!-- <label for="birthdaytime"></label> -->
-          <input type="date" id="birthdaytime" name="departure_date" autocomplete="off">
-        </div>
-        
-        <div id="food_fare_button" class="d-flex justify-content-center my-4">
-          <button type="submit" id="food_button" class="btn btn-primary">Find Fare</button>
-        </div>
-        <br>
       </form>
     </div>
-
 </body>
 </html>
-
 <!-- // this is the best code. -->
