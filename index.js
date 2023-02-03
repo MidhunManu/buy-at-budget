@@ -17,29 +17,143 @@ var store_start_location_iata;
 var store_end_location_name;
 var store_end_location_iata;
 var spicejet_url;
+var final_groceries_list = [];
 
 app.get('/' , (req , res) => {
   // res.render("view/home.ejs");
   res.render("view/shopping.ejs");
 })
-app.post('/course' , (req , res) => {
-  res.render("view/food.ejs");
-  var foodDetails = [];
+app.post('/groceries' , (req , res) => {
+  res.render("view/groceries.ejs");
 });
-app.post('/getCheapestCourse' , (req , res) => {
-  var foodname = req.body.food_name
-  var url = `https://www.swiggy.com/search?query=${foodname}`;
-  console.log(foodname);
-
+app.post('/findCheapestGroceries' , (req , res) => {
+  var grocery_name = req.body.find_groceries;
+	jio_url = `https://www.jiomart.com/catalogsearch/result?q=${grocery_name}`;
+	jio_url = jio_url.replaceAll(" ", "+");
+	var groceries_data_to_send = [];
   (async () => {
-    const browser = await puppeteer.launch({headless : false});
+    const browser = await puppeteer.launch({headless : true});
     const page = await browser.newPage();
-    await page.goto(url);
-    // await page.screenshot({path : "ss.png"});
-  })
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.102 Safari/537.36');
+    await page.goto(jio_url);
 
-  res.render("view/course.ejs");
-  res.end();
+    groceries_data_to_send = [];
+    final_groceries_list = [];
+
+		const get_product_price = await page.evaluate(() => {
+			const price_tag = document.querySelectorAll("span#final_price");
+			var data = [];
+			price_tag.forEach((i) => {
+				data.push(i.innerText);
+			})
+			for(var i = 0; i < data.length; i++) {
+				data[i] = data[i].replaceAll(" ", "");
+				data[i] = data[i].replaceAll("\u20B9", "");
+			}
+			return data;
+		})
+
+		const get_product_name = await page.evaluate(() => {
+			const name_tag = document.querySelectorAll("span.clsgetname");
+			var data = [];
+			name_tag.forEach((i) => {
+				data.push(i.innerText);
+			})
+			return data;
+		})
+
+		const get_product_link = await page.evaluate(() => {
+			const link_tag = document.querySelectorAll("a.category_name.prod-name");
+			var data = [];
+			link_tag.forEach((i) => {
+        // data.push("https://www.bigbasket.com"+i.getAttribute("href"));
+				data.push(`https://www.jiomart.com${i.getAttribute("href")}/`);
+			})
+			return data;
+		});
+		
+		var jio_mart_data = [];
+		for(var i = 0; i < get_product_link.length; i++) {
+			jio_mart_data.push({"name":get_product_name[i], "price":Number(get_product_price[i]), "company": "JioMart", "link":get_product_link[i]});
+    }
+		for(var i = 0; i < get_product_link.length; i++) {
+			groceries_data_to_send.push(jio_mart_data[i]);
+		}
+ 		console.log("jio mart price")
+		console.log(get_product_price); 
+
+		//console.log(jio_mart_data);
+
+// big basket
+		var big_basket_url = `https://www.bigbasket.com/ps/?q=${grocery_name}&nc=as`
+		big_basket_url = big_basket_url.replaceAll(" ", "+");
+    const big_basket_page = await browser.newPage();
+    await big_basket_page.goto(big_basket_url);	
+
+		const get_big_basket_price = await big_basket_page.evaluate(() => {
+			const big_basket_price_tag = document.querySelectorAll("span.discnt-price>span.ng-binding");
+			var data = [];
+			big_basket_price_tag.forEach((i) => {
+				data.push(i.innerText);
+			})
+			return data;
+		})
+
+		const get_big_basket_name = await big_basket_page.evaluate(() => {
+			const big_basket_name_tag = document.querySelectorAll("div.col-sm-12.col-xs-7.prod-name>a.ng-binding");
+			var data = [];
+			big_basket_name_tag.forEach((i) => {
+				data.push(i.innerText);
+			})
+			return data;
+		})
+
+		const get_big_basket_link = await big_basket_page.evaluate(() => {
+			const big_basket_link_tag = document.querySelectorAll("div.col-sm-12.col-xs-7.prod-name>a.ng-binding");
+			var data = [];
+			big_basket_link_tag.forEach((i) => {
+				data.push("https://www.bigbasket.com"+i.getAttribute("href"));
+			})
+			return data;
+		})
+
+		
+		var big_basket_data = [];
+		for(var i = 0; i < get_big_basket_link.length; i++) {
+			big_basket_data.push({"name":get_big_basket_name[i], "price":Number(get_big_basket_price[i]), "company": "Big Basket", "link":get_big_basket_link[i]});
+		}
+
+		for(var i = 0; i < get_big_basket_link.length; i++) {
+			groceries_data_to_send.push(big_basket_data[i]);
+		}	
+
+   function swap(arr, xp, yp) {
+     var temp = arr[xp];
+     arr[xp] = arr[yp];
+     arr[yp] = temp;
+		}
+    
+    for(var i = 0; i < groceries_data_to_send.length - 1; i++) {
+      for(var j = 0; j < groceries_data_to_send.length - i - 1; j++) {
+        if(groceries_data_to_send[j].price > groceries_data_to_send[j + 1].price) {
+          swap(groceries_data_to_send, j, j + 1);
+        }
+      }
+    }
+    
+    for(var i = 0; i < 10; i++) {
+      final_groceries_list.push(groceries_data_to_send[i]);
+    }
+    console.log(final_groceries_list);
+
+    await browser.close();
+    res.render("view/groceries_result.ejs");
+    res.end();
+  })()
+})
+
+app.get("/findGroceries", (req, res) => {
+	res.send(final_groceries_list);
 })
 
 
@@ -201,6 +315,22 @@ await flipkart_page.goto(flipkart_product_url);
 			return names;
 		})
 
+
+		const product_ratings = await flipkart_page.evaluate(() => {
+			const ratings = document.querySelectorAll("div._3LWZlK");
+			let data = [];
+			ratings.forEach((i) => {
+				data.push(`${i.innerText} out of 5 stars`);
+			})
+			return data;
+		})
+
+		/*for(var i = 0; i < product_ratings.length; i++) {
+			if(product_ratings[i] === undefined) {
+				product_ratings[i] = "unavailable";
+			}
+		}	*/
+
 	
 		if(cluttered_prices.length != 0) {
       flipkart_price = flipkart_price.concat(cluttered_prices);
@@ -239,14 +369,21 @@ await flipkart_page.goto(flipkart_product_url);
 
 	flipkart_price = flipkart_price.map(Number); 
     for(let i = 0; i < 5; i++) {
-			flipkart_data.push({"price":flipkart_price[i], "url":flipkart_links[i], "ratings":"unavailable", "names":product_name[i], "name_of_product":`${req.body.product_name_html}`, "company":"flipkart"});
-		}
-	
-    
+			flipkart_data.push({"price":flipkart_price[i], "url":flipkart_links[i], "ratings":product_ratings[i], "names":product_name[i], "name_of_product":`${req.body.product_name_html}`, "company":"flipkart"});
+	}
 
-       var pseudo_data = [];for(let i = 0; i < 5; i++) {
-        flipkart_data.push({"price":flipkart_price[i], "url":flipkart_links[i], "ratings":"unavailable", "names":product_name[i], "name_of_product":`${req.body.product_name_html}`});
-      }
+	/*const flipkart_page = await browser.newPage();
+    var flipkart_product_name = req.body.product_name_html;*/
+
+		// shopping jio mart scraping
+		
+	
+	
+
+       var pseudo_data = [];
+		/*	for(let i = 0; i < 5; i++) {
+        flipkart_data.push({"price":flipkart_price[i], "url":flipkart_links[i], "ratings":product_ratings[i], "names":product_name[i], "name_of_product":`${req.body.product_name_html}`});
+      }*/
        var final = [];
 
        for(var i = 0; i < data.length; i++) {
@@ -294,13 +431,19 @@ await flipkart_page.goto(flipkart_product_url);
 // flipkart_data.push({"price":flipkart_price[i], "url":flipkart_links[i], "ratings":"unavailable", "names":product_name[i], "name_of_product":`${req.body.product_name_html}`});
         data_to_send = [] // clearing the array after one api call
 		shopping_final_data_to_send = [] // clearing the array after one api call
-    
+ 
+		for(var i = 0; i < flipkart_data.length; i++) {
+			if(flipkart_data[i].names === undefined) {
+				flipkart_data[i].names = (flipkart_data[i].name_of_product);
+			}
+		}	
+   
         for(var i = 0; i < 5; i++) {
           shopping_final_data_to_send.push({"price":data[i] , "url":hrefs[i] , "ratings":getRatings[i] , "names":getNames[final[i]] , "name_of_product":product_name_to_buy, "company":"amazon"});
         }
 
         for(var j = 0; j < 5; j++) {
-          shopping_final_data_to_send.push({"price":flipkart_data[j].price, "url":flipkart_data[j].url, "rartings":flipkart_data[j].ratings, "names":flipkart_data[j].names, "names_of_product":flipkart_data[j].name_of_product, "company":"flipkart"});
+          shopping_final_data_to_send.push({"price":flipkart_data[j].price, "url":flipkart_data[j].url, "ratings":flipkart_data[j].ratings, "names":flipkart_data[j].names, "names_of_product":flipkart_data[j].name_of_product, "company":"flipkart"});
         }
 		
 		for(var k = 0; k < shopping_final_data_to_send.length; k++) {
@@ -314,8 +457,6 @@ await flipkart_page.goto(flipkart_product_url);
 		  }
 		}
 
-
-// *for flipkart make a new global array and insert data along with "data_to_send" and send the new global array to frontend.*
       } catch (error) {
 		console.log(error.stack);
       }
