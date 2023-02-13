@@ -1,6 +1,0 @@
-find url
-scrape
-find prices
-sort prices
-get link of cheapest price
-output it
