@@ -1,56 +1,26 @@
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
-import numpy as np
-from time import sleep
-import webbrowser
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:94.0) Gecko/20100101 Firefox/94.0',
     'Accept-Language': 'en-US, en;q=0.5'
 }
 
-quer = input('enter product : ')
-search_query = quer.replace(' ', '+')
-base_url = 'https://www.amazon.com/s?k={0}'.format(search_query)
+data = []
 
-items = []
-for i in range(1, 5):
-    print('Processing {0}...'.format(base_url + '&page={0}'.format(i)))
-    response = requests.get(base_url + '&page={0}'.format(i), headers=headers)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    
-    results = soup.find_all('div', {'class': 's-result-item', 'data-component-type': 's-search-result'})
+url = "https://www.flipkart.com/search?q=handkercheif&sort=price_asc"
+r = requests.get(url, headers=headers)
+html_content = r.content
+# html_content = """
+# <img alt="Amul Moti Homogenised Toned Milk 450 ml Pouch " lazyboundary="800px" src="https://www.bigbasket.com/media/uploads/p/m/40005033_1-amul-moti-homogenised-toned-milk.jpg?tr=w-3840,q=80" decoding="async" data-nimg="responsive" class="DeckImage___StyledImage-sc-1mdvxwk-3 cSWRCd" style="position: absolute; inset: 0px; box-sizing: border-box; padding: 0px; border: none; margin: auto; display: block; width: 0px; height: 0px; min-width: 100%; max-width: 100%; min-height: 100%; max-height: 100%;" sizes="100vw" srcset="https://www.bigbasket.com/media/uploads/p/m/40005033_1-amul-moti-homogenised-toned-milk.jpg?tr=w-640,q=80 640w, https://www.bigbasket.com/media/uploads/p/m/40005033_1-amul-moti-homogenised-toned-milk.jpg?tr=w-750,q=80 750w, https://www.bigbasket.com/media/uploads/p/m/40005033_1-amul-moti-homogenised-toned-milk.jpg?tr=w-828,q=80 828w, https://www.bigbasket.com/media/uploads/p/m/40005033_1-amul-moti-homogenised-toned-milk.jpg?tr=w-1080,q=80 1080w, https://www.bigbasket.com/media/uploads/p/m/40005033_1-amul-moti-homogenised-toned-milk.jpg?tr=w-1200,q=80 1200w, https://www.bigbasket.com/media/uploads/p/m/40005033_1-amul-moti-homogenised-toned-milk.jpg?tr=w-1920,q=80 1920w, https://www.bigbasket.com/media/uploads/p/m/40005033_1-amul-moti-homogenised-toned-milk.jpg?tr=w-2048,q=80 2048w, https://www.bigbasket.com/media/uploads/p/m/40005033_1-amul-moti-homogenised-toned-milk.jpg?tr=w-3840,q=80 3840w">
+# """
+soup = BeautifulSoup(html_content, "html.parser")
 
-    for result in results:
-        product_name = result.h2.text
+img = soup.find_all(class_="_396cs4")
+img2 = soup.find_all(class_="_2r_T1I")
+for i in img:
+    data.append(i.get("src"))
+for i in img2:
+    data.append(i.get("src"))
 
-        try:
-            rating = result.find('i', {'class': 'a-icon'}).text
-            rating_count = result.find_all('span', {'aria-label': True})[1].text
-        except AttributeError:
-            continue
-
-        try:
-            price1 = result.find('span', {'class': 'a-price-whole'}).text
-            price2 = result.find('span', {'class': 'a-price-fraction'}).text
-            price1 = price1.replace(',' , '')
-            price2 = price2.replace(',','')
-            price = float(price1 + price2)
-            product_url = 'https://amazon.com' + result.h2.a['href']
-            # print(rating_count, product_url)
-            items.append([product_name, rating, rating_count, price, product_url])
-        except AttributeError:
-            continue
-    sleep(1.5)
-    
-df = pd.DataFrame(items, columns=['product', 'rating', 'rating count', 'price', 'product url'])
-df.to_csv('{0}.csv'.format(search_query), index=False)  
-# min_idx = (df['price'].idxmin)
-# url = (df.iloc[min_idx]['product url'])
-# webbrowser.open_new_tab(url)
-# min_index = (np.argmin(df['price']))
-# print(df['product url'][min_index])
-# url = df['product url'][0]
-# webbrowser.open_new_tab(url)
-# // this is the best code
+print(data)
