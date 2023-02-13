@@ -7,6 +7,7 @@ app.use(express.urlencoded());
 app.set('view engine' , 'ejs');
 app.set('views' , path.join(__dirname , 'views'));
 app.use(express.static('public'));
+const port = 8080;
 
 var data_to_send = []; // this array is result data of shopping, only for amazon
 var shopping_final_data_to_send; // shopping json reusult
@@ -18,6 +19,7 @@ var store_end_location_name;
 var store_end_location_iata;
 var spicejet_url;
 var final_groceries_list = [];
+var img_data = [];
 
 app.get('/' , (req , res) => {
   // res.render("view/home.ejs");
@@ -71,10 +73,21 @@ app.post('/findCheapestGroceries' , (req , res) => {
 			})
 			return data;
 		});
+
+    const get_product_image = await page.evaluate(() => {
+      window.scrollBy(0, window.innerHeight);
+      const image_tag = document.querySelectorAll("span.cat-img>img.product-image-photo.lazyautosizes.lazyloaded");
+      var data = [];
+      
+      image_tag.forEach((i) => {
+        data.push(i.getAttribute("src"));
+      })
+      return data;
+    })
 		
 		var jio_mart_data = [];
 		for(var i = 0; i < get_product_link.length; i++) {
-			jio_mart_data.push({"name":get_product_name[i], "price":Number(get_product_price[i]), "company": "JioMart", "link":get_product_link[i]});
+			jio_mart_data.push({"name":get_product_name[i], "price":Number(get_product_price[i]), "company": "JioMart", "link":get_product_link[i], "image": get_product_image[i]});
     }
 		for(var i = 0; i < get_product_link.length; i++) {
 			groceries_data_to_send.push(jio_mart_data[i]);
@@ -82,11 +95,76 @@ app.post('/findCheapestGroceries' , (req , res) => {
 
 		//console.log(jio_mart_data);
 
+
+	var amazon_pantry_url = `https://www.amazon.in/s?k=${grocery_name}&i=pantry`;
+	amazon_pantry_url = amazon_pantry_url.replaceAll(" ", "+");
+	const amazon_pantry_page = await browser.newPage();
+	await amazon_pantry_page.goto(amazon_pantry_url);
+
+	const amazon_pantry_price = await amazon_pantry_page.evaluate(() => {
+		const amazon_pantry_price_tag = document.querySelectorAll("span.a-price-whole");
+		var data = [];
+		amazon_pantry_price_tag.forEach((i) => {
+			data.push(i.innerText);
+		})
+		return data;
+	})
+
+	const amazon_pantry_product_name = await amazon_pantry_page.evaluate(() => {
+		const amazon_pantry_name_tag = document.querySelectorAll("span.a-size-base-plus.a-color-base.a-text-normal");
+		var data = [];
+		amazon_pantry_name_tag.forEach((i) => {
+			data.push(i.innerText);
+		})
+		return data;
+	})
+
+	const amazon_pantry_link = await amazon_pantry_page.evaluate(() => {
+		const amazon_pantry_link_tag = document.querySelectorAll("a.a-size-base.a-link-normal.s-underline-text.s-underline-link-text.s-link-style.a-text-normal");
+		var data = [];
+		amazon_pantry_link_tag.forEach((i) => {
+			data.push(i.getAttribute("href"));
+		})
+		return data;
+	})
+
+	const amazon_pantry_ratings = await amazon_pantry_page.evaluate(() => {
+		const amazon_pantry_ratings_tag = document.querySelectorAll("span.a-icon-alt");
+		var data = [];
+		amazon_pantry_ratings_tag.forEach((i) => {
+			data.push(i.innerText);
+		})
+		return data;
+	})	
+
+	const amazon_pantry_images = await amazon_pantry_page.evaluate(() => {
+		const amazon_pantry_image_tag = document.querySelectorAll("img.s-image");
+		var data = [];
+		amazon_pantry_image_tag.forEach((i) => {
+			data.push(i.getAttribute("src"));
+		})
+		return data;
+	})
+
+	var amazon_pantry_data = [];
+	console.log("amazon pantry data\n");
+	for(var i = 0; i < amazon_pantry_link.length; i++) {
+		amazon_pantry_data.push({"name": amazon_pantry_product_name[i], "price": Number(amazon_pantry_price[i]), "link": `https://www.amazon.in`+amazon_pantry_link[i], "ratings":amazon_pantry_ratings[i], "image":amazon_pantry_images[i], "company":"amazon-pantry"});
+	}
+  for(var i = 0; i < amazon_pantry_link.length; i++) {
+    groceries_data_to_send.push(amazon_pantry_data[i]);
+  }
+	//console.log(amazon_pantry_data);
+ 	//console.log(amazon_pantry_url); 
+
 // big basket
 		var big_basket_url = `https://www.bigbasket.com/ps/?q=${grocery_name}&nc=as`
 		big_basket_url = big_basket_url.replaceAll(" ", "+");
     const big_basket_page = await browser.newPage();
-    await big_basket_page.goto(big_basket_url);	
+    await big_basket_page.goto(big_basket_url);
+		//window.scrollTo(0, document.body.scrollHeight);
+		//await big_basket_page.waitForSelector("img.DeckImage___StyledImage-sc-1mdvxwk-3.cSWRCd");
+
 
 		const get_big_basket_price = await big_basket_page.evaluate(() => {
 			const big_basket_price_tag = document.querySelectorAll("span.discnt-price>span.ng-binding");
@@ -106,6 +184,22 @@ app.post('/findCheapestGroceries' , (req , res) => {
 			return data;
 		})
 
+
+    const get_big_basket_img = await big_basket_page.evaluate(() => {
+     // window.scrollTo(0, document.body.scrollHeight);
+		// DeckImage___StyledImage-sc-1mdvxwk-3 cSWRCd
+			//big_basket_page.waitForSelector("img.DeckImage___StyledImage-sc-1mdvxwk-3.cSWRCd");
+      const big_basket_img_tag = document.querySelectorAll("img.DeckImage___StyledImage-sc-1mdvxwk-3.cSWRCd");
+      var data = [];
+      
+      big_basket_img_tag.forEach((i) => {
+        data.push(i.getAttribute("src"))
+      })
+      return data;
+    })
+    // console.log("big basket image")
+    // console.log(get_big_basket_img)
+
 		const get_big_basket_link = await big_basket_page.evaluate(() => {
 			const big_basket_link_tag = document.querySelectorAll("div.col-sm-12.col-xs-7.prod-name>a.ng-binding");
 			var data = [];
@@ -116,15 +210,14 @@ app.post('/findCheapestGroceries' , (req , res) => {
 		})
 
 		
-		var big_basket_data = [];
+	/*	var big_basket_data = [];
 		for(var i = 0; i < get_big_basket_link.length; i++) {
 			big_basket_data.push({"name":get_big_basket_name[i], "price":Number(get_big_basket_price[i]), "company": "Big Basket", "link":get_big_basket_link[i]});
 		}
+	*/
 
-		for(var i = 0; i < get_big_basket_link.length; i++) {
-			groceries_data_to_send.push(big_basket_data[i]);
-		}	
-
+		
+		console.log(groceries_data_to_send);	
    function swap(arr, xp, yp) {
      var temp = arr[xp];
      arr[xp] = arr[yp];
@@ -142,7 +235,7 @@ app.post('/findCheapestGroceries' , (req , res) => {
     for(var i = 0; i < 10; i++) {
       final_groceries_list.push(groceries_data_to_send[i]);
     }
-    console.log(final_groceries_list);
+    // console.log(final_groceries_list);
 
     await browser.close();
     res.render("view/groceries_result.ejs");
@@ -224,10 +317,20 @@ app.post("/shopitem" , (req , res) => {
       });
 
 
+      const get_images = await page.evaluate(() => {
+        const image_tag = document.querySelectorAll("img.s-image");
+        var data = [];
 
+        image_tag.forEach((i) => {
+          data.push(i.getAttribute("src"))
+        })
+        return data;
+      })
+
+      // console.log(get_images)
 
       var data = grab;
-      console.log(data);
+      // console.log(data);
       for(var i = 0; i < data.length; i++) {
         data[i] = data[i].replaceAll("," , "");
       }
@@ -303,6 +406,36 @@ await flipkart_page.goto(flipkart_product_url);
       })
       return data;
     })
+  
+      
+    const get_flipkart_images_vertical = await flipkart_page.evaluate(() => {
+      const image = document.querySelectorAll("img._396cs4")
+      var data = [];
+      image.forEach((i) => {
+        data.push(i.getAttribute("src"));
+      })
+      return data;
+    })
+
+    // const get_flipkart_images_cluttered = await flipkart_page.evaluate(() => {
+    //   const image = document.querySelectorAll("img._2r_T1I")
+    //   var data = [];
+    //   image.forEach((i) => {
+    //     data.push(i.getAttribute("src"));
+    //   })
+    //   return data;
+    // })
+    
+    const flipkart_img_final = () => {
+      var data = []
+      for(var i = 0; i < get_flipkart_images_cluttered.length; i++) {
+        data.append(get_flipkart_images_cluttered[i])
+      }
+      return data;
+    }
+    
+
+    // console.log(flipkart_img_final)
 
 		const product_name = await flipkart_page.evaluate(() => {
 			const name_tag = document.querySelectorAll("div._4rR01T");
@@ -393,6 +526,19 @@ await flipkart_page.goto(flipkart_product_url);
 			return data;
 		})
 
+    const jioshop_image = await jioshop_page.evaluate(() => {
+      window.scrollBy(0, window.innerHeight);
+      const image_tag = document.querySelectorAll("span.cat-img>img.product-image-photo.lazyautosizes.lazyloaded");
+      var data = [];
+      
+      image_tag.forEach((i) => {
+        data.push(i.getAttribute("src"));
+      })
+      return data;
+    })
+
+    // console.log(jioshop_image)
+
 		const jioshop_name = await jioshop_page.evaluate(() => {
 			const name_tag = document.querySelectorAll("span.clsgetname");
 			var data = [];
@@ -411,11 +557,11 @@ await flipkart_page.goto(flipkart_product_url);
 			return data;
 		})
 
-		console.log("jio shop data");
+		// console.log("jio shop data");
 		for(var i = 0; i < 5; i++) {
 			jioshop_data.push({"name":jioshop_name[i], "price":jioshop_price[i], "url":jioshop_link[i], "name_of_product":`${jioshop_product_name}`, "company":"jiomart", "ratings":"unavailable"});
 		}
-		console.log(jioshop_data);
+		// console.log(jioshop_data);
 	
 		
 	
@@ -434,34 +580,34 @@ await flipkart_page.goto(flipkart_product_url);
        pseudo_data = pseudo_data.sort((a , b) => {return a - b});
        for(var i = 0; i < 5; i++) 
         final.push(data.indexOf(pseudo_data[i]))
-        console.log("final")
-       console.log(final)
+        // console.log("final")
+      //  console.log(final)
 
       for(var i = 0; i < final.length; i++)
-       console.log(data[final[i]])
+      //  console.log(data[final[i]])
       for(var i = 0; i < final.length; i++)
-       console.log(hrefs[final[i] - 1])
+      //  console.log(hrefs[final[i] - 1])
 
       // try {
-        console.log(`${product_name} pricelist:\n`)
-        console.log(data);
-        console.log("\nminimum first \n")
-        for(var i = 0; i < 5; i++) {
-          console.log(data[i] - 1);
-        }
+        // console.log(`${product_name} pricelist:\n`)
+        // console.log(data);
+        // console.log("\nminimum first \n")
+        // for(var i = 0; i < 5; i++) {
+        //   console.log(data[i] - 1);
+        // }
       // }
       // catch {
       //   console.log(data[data.length - 1]);
       // }
 
       try {
-        console.log(hrefs);
-        console.log(`${product_name} pricelist:\n`)
-        console.log(data);
+        // console.log(hrefs);
+        // console.log(`${product_name} pricelist:\n`)
+        // console.log(data);
         console.log("\nminimum first \n")
-        for(var i = 0; i < 5; i++) {
-          console.log(data[i]);
-        }
+        // for(var i = 0; i < 5; i++) {
+        //   console.log(data[i]);
+        // }
 
 		function swap(arr, xp, yp) {
 			var temp = arr[xp];
@@ -480,20 +626,20 @@ await flipkart_page.goto(flipkart_product_url);
 		}	
    
         for(var i = 0; i < 5; i++) {
-          shopping_final_data_to_send.push({"price":data[i] , "url":hrefs[i] , "ratings":getRatings[i] , "names":getNames[final[i]] , "name_of_product":product_name_to_buy, "company":"amazon"});
+          shopping_final_data_to_send.push({"price":data[i] , "url":hrefs[i] , "ratings":getRatings[i] , "names":getNames[final[i]] , "name_of_product":product_name_to_buy, "company":"amazon","image":get_images[i]});
         }
 
         for(var j = 0; j < 5; j++) {
-          shopping_final_data_to_send.push({"price":flipkart_data[j].price, "url":flipkart_data[j].url, "ratings":flipkart_data[j].ratings, "names":flipkart_data[j].names, "names_of_product":flipkart_data[j].name_of_product, "company":"flipkart"});
+          shopping_final_data_to_send.push({"price":flipkart_data[j].price, "url":flipkart_data[j].url, "ratings":flipkart_data[j].ratings, "names":flipkart_data[j].names, "names_of_product":flipkart_data[j].name_of_product, "company":"flipkart", "image":get_flipkart_images_vertical[j]});
         }
 
 				for(var k = 0; k < 3; k++) {
-					shopping_final_data_to_send.push({"price":jioshop_data[k].price, "url":jioshop_data[k].url, "ratings":jioshop_data[k].ratings, "names":jioshop_data[k].name, "name_of_product":jioshop_data[k].name_of_product, "company":jioshop_data[k].company});
+					shopping_final_data_to_send.push({"price":jioshop_data[k].price, "url":jioshop_data[k].url, "ratings":jioshop_data[k].ratings, "names":jioshop_data[k].name, "name_of_product":jioshop_data[k].name_of_product, "company":jioshop_data[k].company, "image":jioshop_image[k]});
 				}
 		
-		for(var k = 0; k < shopping_final_data_to_send.length; k++) {
-			console.log(typeof(shopping_final_data_to_send[k].price));
-		}
+		// for(var k = 0; k < shopping_final_data_to_send.length; k++) {
+		// 	console.log(typeof(shopping_final_data_to_send[k].price));
+		// }
 		for(let i = 0; i < shopping_final_data_to_send.length - 1; i++) {
 			for(let j = 0; j < shopping_final_data_to_send.length - i - 1; j++) {
 			if(shopping_final_data_to_send[j].price > shopping_final_data_to_send[j + 1].price) {
@@ -589,7 +735,7 @@ app.post("/getCheapestFare", (req , res) => {
     // const url = `https://google.com`;
     const url = `https://www.makemytrip.com/flight/search?tripType=O&itinerary=${store_start_location_iata}-${store_end_location_iata}-${makemytrip_departure_day}&paxType=A-1_C-0_I-0&cabinClass=E&sTime=1672337344084&forwardFlowRequired=true&mpo=&semType=&intl=false`
     spicejet_url = url;
-    console.log(url);
+    // console.log(url);
 
     // blackText fontSize18 blackFont white-space-no-wrap
     const spicejet_price_page = await browser.newPage();
@@ -624,8 +770,8 @@ app.post("/getCheapestFare", (req , res) => {
 	  return data;
     })
 
-    console.log(flight);
-    console.log(flight_link)
+    // console.log(flight);
+    // console.log(flight_link)
     
     flight_data_to_send = []; // clearing the array after one api call
     for(var i = 0; i < flight.length; i++) {
@@ -665,6 +811,6 @@ app.get("/getdata" , (req , res) => {
 })
 
 
-app.listen(8080);
+app.listen(port)
 
 // this is the best code, I mean it.
