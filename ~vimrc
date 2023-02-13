@@ -1,5 +1,0 @@
-set number
-set cursorline
-colorscheme ron
-set relativenumber
-syntax enable
