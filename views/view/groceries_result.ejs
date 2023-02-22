@@ -16,10 +16,10 @@
     <tr  class="bg-info">
         <!-- <th>s.no</th>
           <th>food name</th> -->
-          <th>name</th>
           <th>image</th>
+					<th>name</th>	
           <th>price</th>
-		  <th>company</th>
+		  		<th>company</th>
           <th>link</th>
     </tr>
 
@@ -39,9 +39,9 @@
         // var product_name = data[i].names || data[i].name_of_product;
         for(var i = 0; i < data.length; i++) {
           var row = `<tr>
-            <td>${data[i].name}</td>
             <td><img src=${data[i].image} width=150 height=150></td>
-            <td>${data[i].price}</td>
+						<td>${data[i].name}</td>
+            <td>\u20B9${data[i].price}</td>
 			<td>${data[i].company}</td>
             <td><button><a href="${data[i].link}">buy it</a></button></td>
           </tr>
