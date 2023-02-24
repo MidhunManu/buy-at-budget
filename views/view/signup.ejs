@@ -24,8 +24,18 @@
       <div>
         <input type="text" id="username_input" name="username_signin" class="form-control my-4" placeholder="Enter Preferred User Name" autocomplete="off">
       </div>
+
+      <div>
+        <input type="text" name="phone" id="phone" class="form-control my-4" placeholder="phone number(optional)">
+      </div>
+
       <div class="d-flex justify-content-center">
         <button type="submit" id="submit" class="btn btn-primary" onclick="validate()">Sign in</button>
+      </div>
+    </form>
+    <form action="/gobackhome" method="get">
+      <div class="d-flex justify-content-center">
+        <button type="submit" id="to_home" class="btn btn-primary my-2">Back to Shopping</button>
       </div>
     </form>
   </div>
