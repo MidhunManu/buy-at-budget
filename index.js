@@ -3,7 +3,7 @@ const airportjs = require("airportsjs");
 const app = express();
 const path = require('path');
 const puppeteer = require('puppeteer');
-
+const mysql = require('mysql');
 // const devices = require('puppeteer/DeviceDescriptors'); 
 // const customDevice = devices['iphone 6'];
 
@@ -25,9 +25,19 @@ var store_end_location_iata;
 var spicejet_url;
 var final_groceries_list = [];
 var img_data = [];
-var login_locker;
+var login_status;
+var login_message;
 var signin_status;
 var signin_message;
+var global_user_name;
+var global_user_email;
+
+var connection = mysql.createPool({
+  host: "127.0.0.1",
+  user: "root",
+  password: "",
+  database: "buy_at_budget"
+})
 
 
 app.get("/userlogin", (req, res) => {
@@ -48,15 +58,18 @@ app.post('/findCheapestGroceries' , (req , res) => {
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.102 Safari/537.36');
     await page.emulate(phone);
-  
+
     groceries_data_to_send = [];
     final_groceries_list = [];
 
+    connection.query(`insert into ${global_user_name}_acc values("${grocery_name}");`);
 
 	var flipkart_grocery_url = `https://www.flipkart.com/search?q=${grocery_name}&sort=price_asc`;
 	flipkart_grocery_url = flipkart_grocery_url.replaceAll(" ", "%20");
 	const flipkart_grocery_page = await browser.newPage();
 	await flipkart_grocery_page.goto(flipkart_grocery_url);
+  console.log(global_user_name);
+
 
 	const flipkart_grocery_price = await flipkart_grocery_page.evaluate(() => {
 		const flipkart_grocery_price_tag = document.querySelectorAll("div._30jeq3");
@@ -153,12 +166,18 @@ app.post('/findCheapestGroceries' , (req , res) => {
   for(var i = 0; i < 10; i++) {
     groceries_data_to_send.push(flipkart_groceries_data[i]);
   }
-  
+
   for(var i = 0; i < amazon_pantry_link.length; i++) {
     groceries_data_to_send.push(amazon_pantry_data[i]);
   }
   
-  console.log(groceries_data_to_send);	
+  // console.log(groceries_data_to_send);	
+
+  for(let i = 0; i < groceries_data_to_send.length; i++) {
+    if(groceries_data_to_send[i].price == undefined) {
+      groceries_data_to_send.splice(i,1);
+    }
+  }
 
   function swap(arr, xp, yp) {
     var temp = arr[xp];
@@ -738,26 +757,43 @@ app.get('/getFlightData' , (req , res) => {
 })
 
 app.post("/login" , (req , res) => {
-  const { email, passwd } = req.body;
+  const { email, username } = req.body;
   
-  if (email == 'user@gmail.com' && passwd === '1234') {
-    login_locker = "success";
-    res.render("view/login_result.ejs")
+  if (email == "" && username == "") {
+    login_status = "failure";
+    login_message = "email or username can't be empty"
+    res.render("view/login.ejs")
     res.end();
-    // res.status(401).json({ message: 'success' });
+  }
+  else {
+    connection.query(`select * from all_users where username="${username}" and email="${email}";`,(err, result) => {
+      if(err) throw err;
+      if(result.length == 0) {
+        login_status = "failure";
+        login_message = "user doesn't exists";
+        res.render("view/login.ejs");
+        res.end();
+      }
+      else {
+        login_status = "success";
+        login_message = `welcome ${username}`;
+        global_user_name = username;
 
-  } else {
-    // res.status(401).json({ message: 'faliure' });
-    login_locker = "failure";
-    res.render("view/login_result.ejs")
+      }
+    })
+
+    res.render("view/shopping.ejs")
     res.end();
   }
 })
 
-
-app.get("/login_res", (req, res) => {
-  res.json({message: `${login_locker}`})
+app.get("/login_response", (req , res) => {
+  res.json({status:`${login_status}`,message:`${login_message}`});
 })
+
+// app.get("/login_res", (req, res) => {
+//   res.json({message: `${login_locker}`})
+// })
 
 app.get("/signup" , (req , res) => {
 
@@ -770,6 +806,10 @@ app.post("/new_signup", (req, res) => {
   // signin_status = "stop";
   var email = req.body.email_signin;
   var name = req.body.username_signin;
+  var phone = req.body.phone;
+
+  
+  
 
   if(email == "" || name == "") {
     signin_status = "failure";
@@ -777,16 +817,46 @@ app.post("/new_signup", (req, res) => {
     res.render("view/signup.ejs")
   }
 
-  else if(email == "user@gmail.com") {
+
+  else if(phone.length > 10) {
     signin_status = "failure";
-    signin_message = "this email is already signed in";
-    res.render("view/signup.ejs")
+    signin_message = "phone number should be less than 10 digits";
+    res.render("view/signup.ejs");
   }
   
   else {
     signin_status = "success"
     signin_message = 'success'
-    res.render("view/signup.ejs")
+
+    
+    connection.getConnection((err, connection) => {
+      // if(err) throw err;
+      console.log("connected");
+
+      // connection.query(`insert into all_users values ("${name}", "${email}", ${phone});`, (err) => {
+      //   throw err;
+      // });
+      if(phone.length == 0) {
+        phone = "no number";
+      }
+      connection.query(`insert into all_users values ("${name}", "${email}", "${phone}");`, (err) => {
+        if (err) {
+          console.log(err);
+          if(err.errno == 1062) { // 1062 primaary key should be unique
+            signin_status = "failure";
+            signin_message = "username or email already exists";
+          }
+        }
+        else {
+          global_user_name = name;
+          connection.query(`create table ${name}_acc(history varchar(50));`);
+        }
+      });
+    })
+
+
+    res.render("view/shopping.ejs")
+    res.end();
   }
 })
 
@@ -794,10 +864,14 @@ app.get("/signup_response", (req, res) => {
   res.json({status:`${signin_status}`,message: `${signin_message}`});
 })
 
+
 app.get("/getdata" , (req , res) => {
   res.send(shopping_final_data_to_send);
 })
 
+app.get("/gobackhome", (req, res) => {
+  res.render("view/shopping.ejs");
+})
 
 app.listen(port)
 
