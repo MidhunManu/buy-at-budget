@@ -173,11 +173,6 @@ app.post('/findCheapestGroceries' , (req , res) => {
   
   // console.log(groceries_data_to_send);	
 
-  for(let i = 0; i < groceries_data_to_send.length; i++) {
-    if(groceries_data_to_send[i].price == undefined) {
-      groceries_data_to_send.splice(i,1);
-    }
-  }
 
   function swap(arr, xp, yp) {
     var temp = arr[xp];
@@ -225,7 +220,7 @@ app.post("/shopitem" , (req , res) => {
     var url = `https://www.amazon.in/s?k=${product_name}`;
 
 
-
+    connection.query(`insert into ${global_user_name}_acc values("${product_name_to_buy}");`);
 
       (async () => {
       const browser = await puppeteer.launch({headless : true});
@@ -485,6 +480,10 @@ await flipkart_page.goto(flipkart_product_url);
 			return data;
 		})
 
+    // for(var i = 0; i < jioshop_price.length; i++) {
+    //   jioshop_price[i] = jioshop_price[i].replaceAll("\u20B9", "")
+    // }
+
 
     const jioshop_image = await jioshop_page.evaluate(() => {
       window.scrollBy(0, window.innerHeight);
@@ -588,17 +587,17 @@ await flipkart_page.goto(flipkart_product_url);
 		}	
    
         for(var i = 0; i < 5; i++) {
-          shopping_final_data_to_send.push({"price":"\u20B9"+data[i] , "url":hrefs[i] , "ratings":getRatings[i] , "names":getNames[final[i]] , "name_of_product":product_name_to_buy, "company":"amazon","image":get_images[i]});
+          shopping_final_data_to_send.push({"price":(data[i]) , "url":hrefs[i] , "ratings":getRatings[i] , "names":getNames[final[i]] , "name_of_product":product_name_to_buy, "company":"amazon","image":get_images[i]});
         }
 
         for(var j = 0; j < 5; j++) {
-          shopping_final_data_to_send.push({"price":"\u20B9"+flipkart_data[j].price, "url":flipkart_data[j].url, "ratings":flipkart_data[j].ratings, "names":flipkart_data[j].names, "names_of_product":flipkart_data[j].name_of_product, "company":"flipkart", "image":get_flipkart_images_vertical[j]});
+          shopping_final_data_to_send.push({"price":(flipkart_data[j].price), "url":flipkart_data[j].url, "ratings":flipkart_data[j].ratings, "names":flipkart_data[j].names, "names_of_product":flipkart_data[j].name_of_product, "company":"flipkart", "image":get_flipkart_images_vertical[j]});
         }
 
 				for(var k = 0; k < 3; k++) {
-					shopping_final_data_to_send.push({"price":jioshop_data[k].price, "url":jioshop_data[k].url, "ratings":jioshop_data[k].ratings, "names":jioshop_data[k].name, "name_of_product":jioshop_data[k].name_of_product, "company":jioshop_data[k].company, "image":jioshop_image[k]});
+					shopping_final_data_to_send.push({"price":(jioshop_data[k].price).replace("\u20B9", ""), "url":jioshop_data[k].url, "ratings":jioshop_data[k].ratings, "names":jioshop_data[k].name, "name_of_product":jioshop_data[k].name_of_product, "company":jioshop_data[k].company, "image":jioshop_image[k]});
 				}
-		
+        console.log(shopping_final_data_to_send);
 		// for(var k = 0; k < shopping_final_data_to_send.length; k++) {
 		// 	console.log(typeof(shopping_final_data_to_send[k].price));
 		// }
@@ -764,9 +763,10 @@ app.post("/login" , (req , res) => {
   else {
     connection.query(`select * from all_users where username="${username}" and email="${email}";`,(err, result) => {
       if(err) throw err;
+
       if(result.length == 0) {
         login_status = "failure";
-        login_message = "user doesn't exists";
+        login_message = "wrong username or password";
         res.render("view/login.ejs");
         res.end();
       }
@@ -774,12 +774,11 @@ app.post("/login" , (req , res) => {
         login_status = "success";
         login_message = `welcome ${username}`;
         global_user_name = username;
-
+        res.render("view/shopping.ejs")
+        res.end();
       }
     })
 
-    res.render("view/shopping.ejs")
-    res.end();
   }
 })
 
