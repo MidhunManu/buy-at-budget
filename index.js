@@ -1,5 +1,5 @@
 const express = require('express');
-const airportjs = require("airportsjs");
+const PORTortjs = require("airportsjs");
 const app = express();
 const path = require('path');
 const puppeteer = require('puppeteer');
@@ -12,7 +12,7 @@ app.use(express.urlencoded());
 app.set('view engine' , 'ejs');
 app.set('views' , path.join(__dirname , 'views'));
 app.use(express.static('public'));
-const port = 8080;
+const PORT = process.env.PORT || 8080;
 
 var data_to_send = []; // this array is result data of shopping, only for amazon
 var shopping_final_data_to_send; // shopping json reusult
@@ -477,6 +477,9 @@ await flipkart_page.goto(flipkart_product_url);
 			price_tag.forEach((i) => {
         data.push(i.innerText);
 			})
+      for(let i = 0; i < data.length; i++) {
+        data[i].replace("\u20B9", "");
+      }
 			return data;
 		})
 
@@ -595,7 +598,7 @@ await flipkart_page.goto(flipkart_product_url);
         }
 
 				for(var k = 0; k < 3; k++) {
-					shopping_final_data_to_send.push({"price":(jioshop_data[k].price).replace("\u20B9", ""), "url":jioshop_data[k].url, "ratings":jioshop_data[k].ratings, "names":jioshop_data[k].name, "name_of_product":jioshop_data[k].name_of_product, "company":jioshop_data[k].company, "image":jioshop_image[k]});
+					shopping_final_data_to_send.push({"price":(jioshop_data[k].price), "url":jioshop_data[k].url, "ratings":jioshop_data[k].ratings, "names":jioshop_data[k].name, "name_of_product":jioshop_data[k].name_of_product, "company":jioshop_data[k].company, "image":jioshop_image[k]});
 				}
         console.log(shopping_final_data_to_send);
 		// for(var k = 0; k < shopping_final_data_to_send.length; k++) {
@@ -868,6 +871,6 @@ app.get("/gobackhome", (req, res) => {
   res.render("view/shopping.ejs");
 })
 
-app.listen(port)
+app.listen(PORT)
 
 // this is the best code, I mean it.
